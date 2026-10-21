@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "47406429244",
+    "project_id": "sharenest-9d1f4",
+    "storage_bucket": "sharenest-9d1f4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:47406429244:android:f7fb591b24f60984a57f39",
+        "android_client_info": {
+          "package_name": "com.ayush.sharenest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwlpmrUmP_DRjxI_bBTZygQp2E5c3isBc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
