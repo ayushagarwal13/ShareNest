@@ -39,9 +39,11 @@ class Settlement {
   final DateTime date;
 }
 
-class ExpenseGroup {
-  ExpenseGroup({required this.name, required this.members});
 
+class ExpenseGroup {
+  ExpenseGroup({this.id, required this.name, required this.members});
+
+  final String? id;
   final String name;
   final List<String> members;
   final List<Expense> expenses = [];
@@ -50,6 +52,7 @@ class ExpenseGroup {
   int get totalPaise =>
       expenses.fold(0, (sum, expense) => sum + expense.amountPaise);
 }
+
 
 class Debt {
   const Debt({required this.from, required this.to, required this.amountPaise});

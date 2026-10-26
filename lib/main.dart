@@ -1,13 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 
+import 'firebase_options.dart';
 import 'models/financial_models.dart';
 import 'utils/financial_calculations.dart';
 import 'utils/settlement_validator.dart';
 
+import 'screens/auth_gate.dart';
+
 export 'models/financial_models.dart';
 export 'utils/financial_calculations.dart';
 
-void main() {
+import 'services/expense_repository.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'services/auth_service.dart';
+
+
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const ShareNestApp());
 }
 
@@ -128,7 +141,7 @@ class ShareNestApp extends StatelessWidget {
         ),
         dividerTheme: const DividerThemeData(color: NestColors.line, space: 1),
       ),
-      home: const ShareNestHome(),
+      home: const AuthGate(home: ShareNestHome()),
     );
   }
 }
@@ -403,11 +416,18 @@ class EmptyState extends StatelessWidget {
   }
 }
 
+
 class GroupCard extends StatelessWidget {
-  const GroupCard({super.key, required this.group, required this.onTap});
+  const GroupCard({
+    super.key,
+    required this.group,
+    required this.onTap,
+    this.onDelete,
+  });
 
   final ExpenseGroup group;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -444,7 +464,7 @@ class GroupCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${group.members.length} members · '
+                      '${group.members.length} members Â· '
                       '${group.expenses.length} expenses',
                       style: const TextStyle(
                         color: NestColors.muted,
@@ -456,7 +476,21 @@ class GroupCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: NestColors.muted),
+                                          Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onDelete != null)
+                    IconButton(
+                      tooltip: 'Delete group',
+                      onPressed: onDelete,
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: NestColors.owe,
+                      ),
+                    ),
+                  const Icon(Icons.chevron_right, color: NestColors.muted),
+                ],
+              ),
             ],
           ),
         ),
@@ -464,6 +498,7 @@ class GroupCard extends StatelessWidget {
     );
   }
 }
+
 
 class ExpenseTile extends StatelessWidget {
   const ExpenseTile({
@@ -522,7 +557,7 @@ class ExpenseTile extends StatelessWidget {
                         if (groupName != null) groupName!,
                         'Paid by ${expense.paidBy}',
                         '$people ${people == 1 ? 'person' : 'people'}',
-                      ].join(' · '),
+                      ].join(' Â· '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
@@ -608,7 +643,7 @@ class SettlementTile extends StatelessWidget {
                     [
                       if (groupName != null) groupName!,
                       'Repayment recorded',
-                    ].join(' · '),
+                    ].join(' Â· '),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -809,7 +844,7 @@ class _CreateGroupSheetState extends State<_CreateGroupSheet> {
           textCapitalization: TextCapitalization.words,
           decoration: const InputDecoration(
             labelText: 'Friends',
-            hintText: 'Sameer, Shreya, Prerna',
+            hintText: 'Alex, Sam, Jordan',
             helperText: 'Separate names with commas',
           ),
         ),
@@ -836,7 +871,7 @@ Future<ExpenseGroup?> showGroupPicker(
   return showNestSheet<ExpenseGroup>(
     context,
     SheetFrame(
-      title: 'Add expense to…',
+      title: 'Add expense toâ€¦',
       subtitle: 'Choose a group',
       children: [
         for (final g in groups)
@@ -951,7 +986,7 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
       final n = preview.participants.length;
       summary =
           'Split equally between $n ${n == 1 ? 'person' : 'people'}'
-          ' · ${money(preview.baseShare)} each'
+          ' Â· ${money(preview.baseShare)} each'
           '${preview.remainder > 0 ? ' (leftover paise shared out)' : ''}';
     }
 
@@ -966,7 +1001,7 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
           style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800),
           decoration: const InputDecoration(
             labelText: 'Amount',
-            prefixText: '₹ ',
+            prefixText: 'â‚¹ ',
             hintText: '0.00',
           ),
           onChanged: (_) => setState(() => _error = null),
@@ -977,7 +1012,7 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
           textCapitalization: TextCapitalization.sentences,
           decoration: const InputDecoration(
             labelText: 'What was it for?',
-            hintText: 'Dinner, taxi, groceries…',
+            hintText: 'Dinner, taxi, groceriesâ€¦',
           ),
           onChanged: (_) => setState(() => _error = null),
         ),
@@ -1028,7 +1063,7 @@ class _AddExpenseSheetState extends State<_AddExpenseSheet> {
                   secondary: Text(
                     preview != null && _selected.contains(group.members[i])
                         ? money(preview.shareFor(group.members[i]))
-                        : '—',
+                        : 'â€”',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
                   value: _selected.contains(group.members[i]),
@@ -1221,7 +1256,7 @@ class _SettleSheetState extends State<_SettleSheet> {
           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
           decoration: const InputDecoration(
             labelText: 'Amount paid',
-            prefixText: '₹ ',
+            prefixText: 'â‚¹ ',
           ),
           onChanged: (_) => setState(() => _error = null),
         ),
@@ -1296,7 +1331,7 @@ Future<Debt?> showDebtPicker(BuildContext context, List<Debt> debts) {
             child: ListTile(
               leading: MemberAvatar(name: d.from),
               title: Text(
-                '${d.from} → ${d.to}',
+                '${d.from} â†’ ${d.to}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
               subtitle: Text(money(d.amountPaise)),
@@ -1320,7 +1355,7 @@ void showExpenseDetailsSheet(
     context,
     SheetFrame(
       title: expense.title,
-      subtitle: '${group.name} · ${dateLabel(expense.date)}',
+      subtitle: '${group.name} Â· ${dateLabel(expense.date)}',
       children: [
         Card(
           child: Padding(
@@ -1387,44 +1422,182 @@ void showExpenseDetailsSheet(
 // ---------- HOME AND NAVIGATION ----------
 
 class ShareNestHome extends StatefulWidget {
-  const ShareNestHome({super.key});
+  const ShareNestHome({super.key, this.expenseRepository});
+
+  final ExpenseRepositoryInterface? expenseRepository;
 
   @override
   State<ShareNestHome> createState() => _ShareNestHomeState();
 }
 
+
 class _ShareNestHomeState extends State<ShareNestHome> {
   final List<ExpenseGroup> groups = [];
-  int selectedTab = 0;
 
-  Future<void> createGroup() async {
+  late final ExpenseRepositoryInterface _expenseRepository =
+      widget.expenseRepository ?? ExpenseRepository();
+
+  int selectedTab = 0;
+  bool _isLoadingGroups = true;
+  String? _loadError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGroups();
+  }
+
+  Future<void> _loadGroups() async {
+    try {
+      final savedGroups = await _expenseRepository.loadGroups();
+
+      if (!mounted) return;
+
+      setState(() {
+        groups
+          ..clear()
+          ..addAll(savedGroups.map((saved) => saved.group));
+        _isLoadingGroups = false;
+        _loadError = null;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingGroups = false;
+        _loadError = error.toString();
+      });
+    }
+  }
+
+Future<void> createGroup() async {
     final group = await showCreateGroupSheet(context);
     if (!mounted || group == null) return;
 
-    setState(() {
-      groups.add(group);
-      selectedTab = 1;
-    });
+    try {
+      final savedGroup = await _expenseRepository.createGroup(group);
+
+      if (!mounted) return;
+
+      setState(() {
+        groups.add(savedGroup.group);
+        selectedTab = 1;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Group saved successfully.')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save group: $error')));
+    }
+  }
+
+Future<void> deleteGroup(ExpenseGroup group) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete group?'),
+        content: Text(
+          'Delete "${group.name}" and all its saved expenses '
+          'and settlements? This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: NestColors.owe),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || shouldDelete != true) return;
+
+    final groupId = group.id;
+    if (groupId == null || groupId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This group has no saved ID.')),
+      );
+      return;
+    }
+
+    try {
+      await _expenseRepository.deleteGroup(groupId);
+
+      if (!mounted) return;
+
+      setState(() {
+        groups.removeWhere((item) => item.id == groupId);
+      });
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('"${group.name}" deleted.')));
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not delete group: $error')));
+    }
   }
 
   Future<void> addExpenseFromHome() async {
     if (groups.isEmpty) return;
-
-    final ExpenseGroup? chosen = groups.length == 1
+      final ExpenseGroup? chosen = groups.length == 1
         ? groups.first
         : await showGroupPicker(context, groups);
+
     if (!mounted || chosen == null) return;
 
     final expense = await showAddExpenseSheet(context, chosen);
     if (!mounted || expense == null) return;
 
-    setState(() => chosen.expenses.add(expense));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Added ${money(expense.amountPaise)} to ${chosen.name}.'),
-      ),
-    );
+    final groupId = chosen.id;
+    if (groupId == null || groupId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This group has no saved ID.')),
+      );
+      return;
+    }
+
+    chosen.expenses.add(expense);
+
+    try {
+      await _expenseRepository.saveGroup(groupId, chosen);
+
+      if (!mounted) return;
+
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Added ${money(expense.amountPaise)} to ${chosen.name}.',
+          ),
+        ),
+      );
+    } catch (error) {
+      chosen.expenses.remove(expense);
+
+      if (!mounted) return;
+
+      setState(() {});
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save expense: $error')));
+    }
   }
+
+
 
   void openGroup(ExpenseGroup group) {
     Navigator.push(
@@ -1434,6 +1607,28 @@ class _ShareNestHomeState extends State<ShareNestHome> {
       if (mounted) setState(() {});
     });
   }
+
+
+  String get _greetingName {
+    // Keep widget tests independent of Firebase Authentication.
+    if (widget.expenseRepository != null) return currentUser;
+
+    final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName?.trim();
+
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName.split(RegExp(r'\s+')).first;
+    }
+
+    final email = user?.email?.trim();
+    if (email != null && email.contains('@')) {
+      final emailName = email.split('@').first;
+      if (emailName.isNotEmpty) return emailName;
+    }
+
+    return currentUser;
+  }
+
 
   int get totalOwedPaise {
     var total = 0;
@@ -1506,10 +1701,50 @@ class _ShareNestHomeState extends State<ShareNestHome> {
           ],
         ),
       ),
-      body: IndexedStack(
-        index: selectedTab,
-        children: [buildHome(), buildGroups(), buildActivity(), buildAccount()],
-      ),
+
+body: _isLoadingGroups
+    ? const Center(child: CircularProgressIndicator())
+    : _loadError != null
+        ? Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Could not load your saved groups.'),
+                  const SizedBox(height: 8),
+                  Text(
+                    _loadError!,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () {
+                      setState(() {
+                        _isLoadingGroups = true;
+                        _loadError = null;
+                      });
+                      _loadGroups();
+                    },
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          )
+        : IndexedStack(
+              index: selectedTab,
+              children: [
+                buildHome(),
+                buildGroups(),
+                buildActivity(),
+                if (widget.expenseRepository == null)
+                  buildAccount()
+                else
+                  const SizedBox.shrink(),
+              ],
+            ),
+
       floatingActionButton: _buildFab(),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedTab,
@@ -1549,7 +1784,7 @@ class _ShareNestHomeState extends State<ShareNestHome> {
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 110),
       children: [
         Text(
-          'Hello, $currentUser',
+          'Hello, $_greetingName',
           style: const TextStyle(color: NestColors.muted, fontSize: 15),
         ),
         const SizedBox(height: 2),
@@ -1584,7 +1819,13 @@ class _ShareNestHomeState extends State<ShareNestHome> {
         else
           ...groups
               .take(3)
-              .map((g) => GroupCard(group: g, onTap: () => openGroup(g))),
+              .map(
+                (g) => GroupCard(
+                  group: g,
+                  onTap: () => openGroup(g),
+                  onDelete: () => deleteGroup(g),
+                ),
+              ),
         const SizedBox(height: 16),
         SectionHeader(
           'Recent activity',
@@ -1706,6 +1947,7 @@ class _ShareNestHomeState extends State<ShareNestHome> {
 
   // ----- Groups tab -----
 
+
   Widget buildGroups() {
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 8, 18, 110),
@@ -1732,10 +1974,17 @@ class _ShareNestHomeState extends State<ShareNestHome> {
             ),
           )
         else
-          ...groups.map((g) => GroupCard(group: g, onTap: () => openGroup(g))),
+          ...groups.map(
+            (g) => GroupCard(
+              group: g,
+              onTap: () => openGroup(g),
+              onDelete: () => deleteGroup(g),
+            ),
+          ),
       ],
     );
   }
+
 
   // ----- Activity tab -----
 
@@ -1798,81 +2047,265 @@ class _ShareNestHomeState extends State<ShareNestHome> {
 
   // ----- Account tab -----
 
+  Future<void> deleteAccount() async {
+    final user = AuthService.instance.currentUser;
+    if (user == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete account permanently?'),
+        content: const Text(
+          'This permanently deletes your ShareNest account, '
+          'saved groups, expenses and settlements. '
+          'This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: NestColors.owe),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Delete account'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true) return;
+
+    String? password;
+
+    final providers = user.providerData
+        .map((provider) => provider.providerId)
+        .toSet();
+
+    // Ask for a password only for email/password accounts.
+
+// Ask for a password only for email/password accounts.
+    if (providers.contains('password')) {
+      final controller = TextEditingController();
+
+      password = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Verify your identity'),
+          content: TextField(
+            controller: controller,
+            obscureText: true,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'Current password'),
+            onSubmitted: (_) {
+              Navigator.of(dialogContext).pop(controller.text);
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop(controller.text);
+              },
+              child: const Text('Continue'),
+            ),
+          ],
+        ),
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+      controller.dispose();
+
+      if (!mounted || password == null || password.isEmpty) {
+        return;
+      }
+    }
+
+    try {
+      // Reauthenticate before deleting any saved data.
+      await AuthService.instance.reauthenticateCurrentUser(password: password);
+
+      // Remove the signed-in user's saved groups first.
+      await _expenseRepository.deleteAllGroups();
+
+      // Then permanently delete the Firebase Authentication account.
+      await AuthService.instance.deleteCurrentUser();
+
+      if (!mounted) return;
+
+      setState(() {
+        groups.clear();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your ShareNest account has been deleted.'),
+        ),
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+
+      final message = switch (error.code) {
+        'wrong-password' || 'invalid-credential' =>
+          'Identity verification failed. Please check your credentials.',
+        'requires-recent-login' =>
+          'Recent sign-in is required. Please sign in again and retry.',
+        'user-mismatch' =>
+          'The verified account does not match your ShareNest account.',
+        'network-request-failed' =>
+          'Network error. Check your connection and try again.',
+        _ => error.message ?? 'Account deletion failed.',
+      };
+
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account deletion failed. Please try again.'),
+        ),
+      );
+    }
+  }
+
+
+
   Widget buildAccount() {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(18, 8, 18, 40),
-      children: [
-        const SizedBox(height: 12),
-        const Center(child: MemberAvatar(name: currentUser, radius: 44)),
-        const SizedBox(height: 14),
-        Text(
-          currentUser,
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineSmall
-              ?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 4),
-        const Text(
-          'Prototype profile',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: NestColors.muted),
-        ),
-        const SizedBox(height: 24),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.cloud_off_outlined, color: NestColors.muted),
-                    SizedBox(width: 10),
-                    Text(
-                      'Not signed in',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ],
+  final user = FirebaseAuth.instance.currentUser;
+  final displayName = user?.displayName?.trim().isNotEmpty == true
+      ? user!.displayName!.trim()
+      : (user?.email?.split('@').first ?? currentUser);
+
+  return ListView(
+    padding: const EdgeInsets.fromLTRB(18, 8, 18, 40),
+    children: [
+      const SizedBox(height: 12),
+      Center(child: MemberAvatar(name: displayName, radius: 44)),
+      const SizedBox(height: 14),
+      Text(
+        displayName,
+        textAlign: TextAlign.center,
+        style: Theme.of(context).textTheme.headlineSmall
+            ?.copyWith(fontWeight: FontWeight.w800),
+      ),
+      const SizedBox(height: 4),
+      Text(
+        user?.email ?? 'No email available',
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: NestColors.muted),
+      ),
+      const SizedBox(height: 24),
+
+      Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    user != null
+                        ? Icons.cloud_done_outlined
+                        : Icons.cloud_off_outlined,
+                    color: NestColors.muted,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    user != null ? 'Signed in' : 'Not signed in',
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                user != null
+                    ? 'Your account is connected to Firebase. '
+                        'Your saved groups are stored in the cloud.'
+                    : 'Sign in to access your saved expense groups.',
+                style: const TextStyle(
+                  color: NestColors.muted,
+                  height: 1.4,
                 ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Sign-in and cloud sync are planned for a later version. '
-                  'For now your data stays in memory on this device.',
-                  style: TextStyle(color: NestColors.muted, height: 1.4),
-                ),
-                const SizedBox(height: 14),
-                const SizedBox(
+              ),
+              const SizedBox(height: 14),
+
+              // Sign out button
+              SizedBox(
+                width: double.infinity,
+                child: user != null
+                    ? FilledButton(
+                        onPressed: () async {
+                          try {
+                            await AuthService.instance.signOut();
+                          } catch (error) {
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Sign out failed: $error'),
+                              ),
+                            );
+                          }
+                        },
+                        child: const Text('Sign out'),
+                      )
+                    : const Text(
+                        'Please use the sign-in screen to continue.',
+                      ),
+              ),
+
+              // Delete Account button
+              if (user != null) ...[
+                const SizedBox(height: 12),
+                SizedBox(
                   width: double.infinity,
-                  child: FilledButton(
-                    onPressed: null,
-                    child: Text('Sign in (coming soon)'),
+                  child: OutlinedButton.icon(
+                    onPressed: deleteAccount,
+                    icon: const Icon(Icons.delete_forever_outlined),
+                    label: const Text('Delete Account'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: NestColors.owe,
+                      side: const BorderSide(
+                        color: NestColors.owe,
+                      ),
+                    ),
                   ),
                 ),
               ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        const Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: Icon(Icons.lock_outline),
-                title: Text('Privacy and security'),
-                subtitle: Text('Settings will be added with accounts.'),
-              ),
-              Divider(),
-              ListTile(
-                leading: Icon(Icons.info_outline),
-                title: Text('About ShareNest'),
-                subtitle: Text('Shared expenses. Clear balances.'),
-              ),
             ],
           ),
         ),
-      ],
-    );
-  }
+      ),
+
+      const SizedBox(height: 6),
+
+      const Card(
+        child: Column(
+          children: [
+            ListTile(
+              leading: Icon(Icons.lock_outline),
+              title: Text('Privacy and security'),
+              subtitle: Text(
+                'Your account is protected by Firebase Authentication.',
+              ),
+            ),
+            Divider(),
+            ListTile(
+              leading: Icon(Icons.info_outline),
+              title: Text('About ShareNest'),
+              subtitle: Text('Shared expenses. Clear balances.'),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
 }
 
 // ---------- GROUP DETAILS ----------
@@ -1892,17 +2325,47 @@ class _GroupDetailsPageState extends State<GroupDetailsPage> {
   /// 0 = Balances, 1 = Expenses, 2 = History
   int section = 0;
 
-  Future<void> addExpense() async {
+
+Future<void> addExpense() async {
     final expense = await showAddExpenseSheet(context, group);
     if (!mounted || expense == null) return;
 
-    setState(() => group.expenses.add(expense));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Expense of ${money(expense.amountPaise)} saved.'),
-      ),
-    );
+    final groupId = group.id;
+    if (groupId == null || groupId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This group has not been saved.')),
+      );
+      return;
+    }
+
+    group.expenses.add(expense);
+
+    try {
+      await ExpenseRepository().saveGroup(groupId, group);
+
+      if (!mounted) return;
+
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Expense of ${money(expense.amountPaise)} saved.'),
+        ),
+      );
+    } catch (error) {
+      group.expenses.remove(expense);
+
+      if (!mounted) return;
+
+      setState(() {});
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save expense: $error')));
+    }
   }
+
+
 
 
 Future<void> settleUp(Debt debt) async {
@@ -1921,21 +2384,46 @@ Future<void> settleUp(Debt debt) async {
       return;
     }
 
-    setState(() {
-      group.settlements.add(
-        Settlement(
-          from: debt.from,
-          to: debt.to,
-          amountPaise: amount,
-          date: DateTime.now(),
-        ),
+    final groupId = group.id;
+    if (groupId == null || groupId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This group has not been saved.')),
       );
-    });
+      return;
+    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Repayment of ${money(amount)} recorded.')),
+    final settlement = Settlement(
+      from: debt.from,
+      to: debt.to,
+      amountPaise: amount,
+      date: DateTime.now(),
     );
+
+    group.settlements.add(settlement);
+
+    try {
+      await ExpenseRepository().saveGroup(groupId, group);
+
+      if (!mounted) return;
+
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Repayment of ${money(amount)} recorded.')),
+      );
+    } catch (error) {
+      group.settlements.remove(settlement);
+
+      if (!mounted) return;
+
+      setState(() {});
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save repayment: $error')),
+      );
+    }
   }
+
 
 
   Future<void> settleFlow(List<Debt> debts) async {

@@ -12,7 +12,20 @@
           "package_name": "com.ayush.sharenest"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "47406429244-36jt9sl1incu5s0ea7tgct339kefnkqs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.ayush.sharenest",
+            "certificate_hash": "b0a14bbd9e5a67534ff18e77665344ff535e2f5a"
+          }
+        },
+        {
+          "client_id": "47406429244-oki05mui74j0avp38ahak56vjbsch9i2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDwlpmrUmP_DRjxI_bBTZygQp2E5c3isBc"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "47406429244-oki05mui74j0avp38ahak56vjbsch9i2.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "47406429244-29mnsk8qdgntt2u6jenv4vdapb4j94pj.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.ayush.sharenest"
+              }
+            }
+          ]
         }
       }
     }

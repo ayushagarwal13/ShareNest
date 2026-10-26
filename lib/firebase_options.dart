@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -63,5 +60,14 @@ class DefaultFirebaseOptions {
     projectId: 'sharenest-9d1f4',
     storageBucket: 'sharenest-9d1f4.firebasestorage.app',
     iosBundleId: 'com.ayush.sharenest',
+  );
+
+  static const FirebaseOptions web = FirebaseOptions(
+    apiKey: 'AIzaSyAXtNjPUzOE0DUoK6r9ZrvmOjjbnOEaLPI',
+    appId: '1:47406429244:web:bfef192cc80389f2a57f39',
+    messagingSenderId: '47406429244',
+    projectId: 'sharenest-9d1f4',
+    authDomain: 'sharenest-9d1f4.firebaseapp.com',
+    storageBucket: 'sharenest-9d1f4.firebasestorage.app',
   );
 }
